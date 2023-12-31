@@ -408,3 +408,187 @@ Questions:
 
 28. What does unit return type mean ? 
 	In Rust, the unit type is represented by the empty tuple `()`. It is often referred to as "unit" or "unit type." In Rust, functions that don't return a meaningful value often have a return type of `()`.
+
+5. I want to make the web-server handle the request asynchronously . 
+
+Questions:
+
+
+28. how do I make a function asynchronous ? 
+	1. Use `async` keyword.
+		- Place `async` before the `fn` keyword to make a function asynchronous:
+	```rust
+		async fn my_async_function() -> String { // ... asynchronous code here ... }	
+	```
+	  2. The `async` function returns a `Future`
+		- Asynchronous functions return a `Future`, a type that represents an eventual value.
+		- The compiler handles this implicitly, so you don't need to specify the return type explicitly (unless you need more control).
+	3.  We need `await` keyword to wait for a `Future` to complete
+	 ```rust
+		async fn fetch_data() -> Result<String, reqwest::Error> {
+			let response = reqwest::get("https://example.com").await?;
+			let text = response.text().await?;
+			Ok(text) 
+		}
+	```
+	4.  To run a `Future`:
+		- You need a runtime to drive the execution of asynchronous tasks.
+		- Common runtimes include <u>Tokio</u> and <u>async-std</u>.
+		Example using <u>tokio</u>: 
+	```rust
+	#[tokio::main]
+	async fn main() -> Result<(), Box<dyn std::error::Error>> {
+	    let data = fetch_data().await?;
+	    println!("Fetched data: {}", data);
+	    Ok(())
+	}
+	```
+
+6. Setting up async web-server
+```rust
+use tokio::io::{AsyncReadExt, AsyncWriteExt, Result};
+use tokio::fs;
+use tokio::net::TcpListener;
+use tokio::net::TcpStream;
+
+const HOST: &str = "127.0.0.1";
+const PORT: &str = "8001";
+const BUFFER_SIZE: usize = 1024;
+
+#[tokio::main]
+async fn main() {
+    let end_point: String = format!("{}:{}", HOST, PORT);
+    match TcpListener::bind(&end_point).await {
+        Ok(listener) => {
+            println!("Listening on {}", end_point);
+            while let Ok((socket, _)) = listener.accept().await {
+                tokio::spawn(handle_connection(socket));
+            }
+        }
+        Err(err) => {
+            eprintln!("Error binding to address: {}", err);
+        }
+    }
+}
+
+async fn handle_connection(mut stream: TcpStream) -> Result<()> {
+    let mut buffer = [0u8; BUFFER_SIZE];
+    let bytes_read = stream.read(&mut buffer).await?;
+    // Process the request (not implemented in this code)
+
+    let file_content = fs::read_to_string("./index.html").await?;
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
+        file_content.len(),
+        file_content
+    );
+
+    stream.write_all(response.as_bytes()).await?;
+    stream.flush().await?;
+
+    Ok(())
+}
+```
+
+
+Questions:
+
+29. Why do we need to import `use tokio::io::{AsyncReadExt, AsyncWriteExt};` for the `stream.read` and `stream.write_all` functions ?
+	Importing traits AsyncReadExt, AsyncWriteExt from the `tokio::io` module. These traits provide additional methods for working with asynchronous I/O.
+
+30. What does it mean to have a value moved?
+	The ownership of `end_point` is transferred (moved) it is moved to function or a variable.
+
+31.  What does spawn function do?
+	It spawns a new asynchronous task to handle the connection concurrently.
+
+32. What is u8 type mean ?
+   In Rust, `u8` is an unsigned 8-bit integer type.
+
+33. What is the difference between write and write_all? 
+	write_all ensures that the entire buffer is written, while write may not write the entire buffer at once.
+
+34. Explain flush in detail.
+	Flush ensures that all written data is sent immediately.
+
+35. What are traits ?
+	In Rust, traits are a powerful mechanism for defining shared behavior in a generic way. Traits allow you to define methods that can be implemented by various types, enabling polymorphism and code reuse.
+
+36. how to define a trait?
+	A trait defines a set of methods that can be implemented by types. It serves as a way to declare functionality without providing a default implementation.
+```rust
+// Example trait definition
+trait Drawable {
+    fn draw(&self);
+}
+```
+
+37. how to implement a functionality of a struct over a trait ? 
+	Types can implement traits by providing their own implementation for the methods declared in the trait.
+```rust
+struct Circle {
+	radius: f64,
+}
+
+impl Drawable for Circle {
+	fn draw(&self) {
+		println!("Drawing a circle with radius {}", self.radius);
+	}
+}
+```
+
+38. how do traits enable polymorphism ?
+	Traits enable polymorphism by allowing different types to be treated uniformly if they implement the same set of methods.
+ ```rust
+fn draw_shape(shape: &dyn Drawable) {
+    shape.draw();
+}
+
+let circle = Circle { radius: 3.0 };
+draw_shape(&circle);
+```
+
+39. How do traits provide default implementation ? 
+	Traits can provide default implementations for some or all of their methods. Types implementing the trait can choose to override or use these defaults.
+ ```rust
+trait Greet {
+    fn greet(&self) {
+        println!("Hello!");
+    }
+}
+
+struct Person;
+
+impl Greet for Person {
+    // No need to implement greet, using the default.
+}
+```
+
+40. What are associated traits ?
+	Traits can include associated types, allowing them to specify types that depend on the implementing type.
+ ```rust
+trait Iterator {
+    type Item;
+
+    fn next(&mut self) -> Option<Self::Item>;
+}
+```
+
+41. how are traits used with generics ?
+	Traits are often used with generics to express constraints on the types that can be used with a generic function or struct.
+```rust
+fn print_and_draw<T: Display + Drawable>(item: T) {
+    println!("{}", item);
+    item.draw();
+}
+```
+Some traits can be automatically derived for custom types using `#[derive]` attribute.
+```rust 
+  #[derive(Debug)]
+  struct Point { x: f64, y: f64, }
+```
+
+	 Blanket implementation
+```rust
+   impl<T: Display> Greet for T { fn greet(&self) { println!("Greetings, {}!", self); } }
+```
