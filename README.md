@@ -1,8 +1,12 @@
 1. Rust applications can be created using a package manager called cargo.
-	_cargo new web_server_
+```bash
+cargo new web_server
+```
 
 2. To run the application, we have to run the following command.
-	_cargo new web_server_
+```bash
+cargo new web_server
+```
 
 1. We will be using TCP as our transport level protocol.
 	_Will be using **std::net** library for creating a TCP connection_
@@ -312,7 +316,8 @@ Questions:
 	 The `flush` method ensures that any buffered data is written to the underlying stream. In network programming, it's crucial to flush data to ensure timely delivery.
 
 4. Let's send an HTML static file to have it render on the browser.
-	```rust
+
+```rust
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::io::prelude::*;
